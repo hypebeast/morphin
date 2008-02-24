@@ -19,6 +19,8 @@ pygst.require('0.10')
 import gst
 
 from src.common import globals
+from src.utils import utils
+from gst.extend import discoverer
 
 
 def vsinkDef():
@@ -83,4 +85,47 @@ def isStopMsg(msg):
     # (Goes via paused when stopping even if it was playing)
     return (msg[0] == gst.STATE_PAUSED and msg[1] == gst.STATE_READY)
 
+
+def getDuration(uri):
+    def discovered(d, is_media):
+        if is_media:
+            print d.videolength
+            return utils.nsTos(d.videolength)
+        else:
+            pass
+            
+    d = discoverer.Discoverer(uri)
+    d.connect('discovered', discovered)
+    d.discover()
+    
+
+
+class DefaultPlayer:
+    def __init__(self):
+        self.createPlayer()
+        
+    
+    def createPlayer(self):
+        """
+        """
+        self.player = gst.element_factory_make("playbin", "player")
+        
+        
+    # Returns the total duration seconds.
+    getDurationSec = lambda self: utils.nsTos(self.getDuration())
+
+
+    def getDuration(self):
+        # Returns the duration (nanoseconds).
+        try:
+            return self.player.query_duration(gst.FORMAT_TIME)[0]
+        except:
+            return 0
+    
+        
+    def setURI(self, uri):
+        """
+        This method sets the URI for the player
+        """
+        self.player.set_property('uri', uri)
 

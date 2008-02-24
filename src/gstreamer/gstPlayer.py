@@ -25,7 +25,6 @@ from src.services import log
 from src.common import globals
 from src.utils import utils
 
-
 class Player:
     def __init__(self):
         """
@@ -234,6 +233,7 @@ class Player:
         This method sets the aspect ratio for the video.
         """
         pass
+    
     
     def setBrightness(self, val):
         ## Sets the brightness of the video.

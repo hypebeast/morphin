@@ -1,4 +1,4 @@
-# Copyright (C) 2007 Sebastian Ruml <sebastian.ruml@gmail.com>
+# Copyright (C) 2007-2008 Sebastian Ruml <sebastian.ruml@gmail.com>
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -26,6 +26,7 @@ from src.gstreamer import tools as gstTools
 from src.services import log 
 from src.utils import utils
 from src.services import config
+from src.MediaManagement import MediaManager
 
 
 class MorphinWindow(gobject.GObject): 
@@ -36,10 +37,11 @@ class MorphinWindow(gobject.GObject):
 
     def __init__(self, options, args):
         windowName = "MainWindow"
-        self.options = options
+        self._options = options
 
         self.currentFile = ""
-
+        
+        # List that holds all last played media
         # Logger
         self._logger = log.Logger()
         
@@ -48,6 +50,9 @@ class MorphinWindow(gobject.GObject):
         
         # Configuration
         self._config = config.Config(globals.cfgFile, globals.DEFAULT_CONFIG)
+        
+        # Media Manager
+        self._mediaManager = MediaManager.MediaManager()
         
         # The xml glade file object
         self.xml = gtk.glade.XML(globals.gladeFile, windowName, globals.appName)
@@ -107,12 +112,12 @@ class MorphinWindow(gobject.GObject):
         # TODO: Add singleton check here
         #self.__single = self
 
+    # Load all settings
+        self.loadConfig()
+        
         # Show the main window
         self.window.show()
 
-        # Load the configuration
-        self.loadConfig()
-        
         #
         # Setting various states
         #
@@ -126,18 +131,8 @@ class MorphinWindow(gobject.GObject):
         # Update the progress
         self.progressUpdate()
 
-        # Play a video, if it was given on the command line
-        if len(args) > 0:
-            # TODO: Add handling for more than one file (implement a
-            # queue for handling the media files)
-            self.currentFile = args[0]
-            self.playFile(self.currentFile)
-        else:
-            self.showOpenMedia()
-
-        # Check for fullscreen
-        if options.fullscreen:
-            self.activateFullscreen()
+        # Process the command line arguments
+        self.processCommandLine(args)
 
 
     # Checks if we should allow fullscreen functions (It's 1 when is's
@@ -146,21 +141,45 @@ class MorphinWindow(gobject.GObject):
 
     # Stop the player
     stopPlayer = lambda self, widget: self._player.stop()
+    
         
-
     def loadConfig(self):
         """
         This method loads all configuration settings.
         """
-        pass
+        # Set saved main window size
+        w = self._config.get_option('appWidth', 'general')
+        h = self._config.get_option('appHeight', 'general')
+        self.setWindowSize(w, h)
+        
+        #TODO: Load recent played media
+        uris = self._config.get_option('recentMedia', 'general')
+        self._mediaManager.setRecentPlayed(uris)
+        
+        print uris
+    
     
     def saveConfig(self):
         """
         This method saves all config options.
         """
-        self._config.write()
+        # Save the window size
+        w, h = self.getWindowSize()
+        self._logger.debug(w)
+        self._logger.debug(h)
         
+        self._config.set_option('appWidth', w, 'general')
+        self._config.set_option('appHeight', h, 'general')
+        
+        # Save recent played media
+        uris = []
+        uris = self._mediaManager.getRecentPlayed()
+        self._config.set_option('recentMedia', uris, 'general')
+        
+        # Save all settings to the file system
+        self._config.write()
     
+        
     def quit(self, widget=None, event=None):
         # Shut down the GST
         self._player.stopCompletely()
@@ -171,12 +190,30 @@ class MorphinWindow(gobject.GObject):
         # Quit the app
         gtk.main_quit()
 
-            
+        
+    def processCommandLine(self, args):
+        """
+        This method processed the command line arguments.
+        """
+        # Play a video, if it was given on the command line
+        if len(args) > 0:
+            # TODO: Add handling for more than one file (implement a
+            # queue for handling the media files)
+            self.currentFile = args[0]
+            self.playFile(self.currentFile)
+        else:
+            self.showOpenMedia()
+
+        # Check for fullscreen
+        if self._options.fullscreen:
+            self.activateFullscreen()
+    
+        
     def showOpenMedia(self, widget=None, event=None):
         """
         This method shows the PlayMedia dialog.
         """
-        dlg = PlayMediaWindow.PlayMediaWindow(self.window)
+        dlg = PlayMediaWindow.PlayMediaWindow(self.window, self._mediaManager.getRecentPlayed())
         dlg.show_all()
         dlg.connect('result', self.get_media_url)
 
@@ -197,14 +234,14 @@ class MorphinWindow(gobject.GObject):
 
     def mnuiStopClicked(self, widget=None, event=None):
         """
-        
+        This method is called when the user clicks the stop menu item.
         """
         self._player.stop()
 
 
     def showSettingsDlg(self,widget=None, event=None):
         """
-        
+        This method is called when the user clicks the settings menu item.
         """
         SettingsDialog.SettingsDialog(self.window)
         
@@ -237,11 +274,12 @@ class MorphinWindow(gobject.GObject):
             # TODO: Handle the end of a video file
             self._player.stop() 
         elif t == 'error':
-			# On an error, empty the currently playing file (also stops it).
-			self.playFile(None)
-			# Show an error about the failure.
-			msg = message.parse_error()
-			dialogues.ErrorMsgBox("Error", str(msg[0]) + '\n\n' + str(msg[1]))
+            # On an error, empty the currently playing file (also stops it).
+            self.playFile(None)
+            self.stopPlayer()
+            # Show an error about the failure.
+            msg = message.parse_error()
+            dialogues.ErrMsgBox("Error", str(msg[0]) + '\n\n' + str(msg[1]))
         elif t == 'state_changed' and message.src == self._player.player:
 		    self.onPlayerStateChange(message)
         #elif t == 'tag':
@@ -374,9 +412,11 @@ class MorphinWindow(gobject.GObject):
 
 
     def onMainStateEvent(self, widget=None, event=None):
-        """This method is called when a state event occurs on the main
+        """
+        This method is called when a state event occurs on the main
         window. It's used for handling the changes between fullscreen
-        and normal state."""
+        and normal state.
+        """
         fs = event.new_window_state & gtk.gdk.WINDOW_STATE_FULLSCREEN
         if fs:
             # Hide all the widgets other than the video window.
@@ -411,22 +451,9 @@ class MorphinWindow(gobject.GObject):
         return False
 
 
-    def playPauseToggle(self, widget=None, event=None):
-        """
-        This method toggles the player play/pause.
-        """
-        if not self._player.getURI():
-            # If there is no currently playing track open the PlayMedia window.
-            PlayMediaWindow.PlayMediaWindow(self.window)
-        elif self._player.isPlaying():
-            self._player.pause()
-        else:
-            self._player.play()
-             
-
     def videoWindowOnStop(self):
         """
-        This method is called when the player stops
+        This method is called when the player stops.
         """
         if self._player.playingVideo():
             return
@@ -519,9 +546,13 @@ class MorphinWindow(gobject.GObject):
         """
         This method plays the given file. The filename could also be
         a URI.
+        
+        @param filenmae: The filename of the file to be played.
+        @type filename: string
         """
         self._player.stop()
 
+        # TODO: Make it configurable
         self._player.setAudioTrack(0)
         
         # If no file is to be played, set the URI to None, and the
@@ -538,6 +569,9 @@ class MorphinWindow(gobject.GObject):
             if '://' not in filename:
                 filename = 'file://' + filename
 
+            # TODO: Last Played URI handling. Check if file was already played.
+            self._mediaManager.AddRecentPlayedMedia(filename, self._config)
+            
             self._player.setURI(filename)
 
             self._player.play()
@@ -551,6 +585,19 @@ class MorphinWindow(gobject.GObject):
         This method plays the next media in the queue.
         """
         pass
+
+
+    def playPauseToggle(self, widget=None, event=None):
+        """
+        This method toggles the player play/pause.
+        """
+        if not self._player.getURI():
+            # If there is no currently playing track open the PlayMedia window.
+            PlayMediaWindow.PlayMediaWindow(self.window)
+        elif self._player.isPlaying():
+            self._player.pause()
+        else:
+            self._player.play()
 
 
     def createPlayTimers(self):
@@ -585,8 +632,13 @@ class MorphinWindow(gobject.GObject):
 
 
     def playPauseChanged(self, playing):
-        """This method changes the toggle button for playing/pause the
-        video according to the argument."""
+        """
+        This method changes the toggle button for playing/pause the
+        video according to the argument.
+        
+        @param playing: Defines if the player is playing or pause.
+        @type playing: bool  
+        """
         # Set the icon accordingly to the argument 
         img = gtk.image_new_from_stock('gtk-media-play' if (not playing) else 'gtk-media-pause', 1)
 
@@ -638,14 +690,14 @@ class MorphinWindow(gobject.GObject):
 
     def videoWindowMotion(self, widget, event):
         """
-        This method is called when the motion event is fired
+        This method is called when a motion event occurs in the video window.
         """
         pass
 
 
     def videoWindowEnter(self, widget, event):
         """
-        This method is called when the video window is entered
+        This method is called when the video window is entered.
         """
         pass
 
@@ -658,8 +710,10 @@ class MorphinWindow(gobject.GObject):
 
 
     def setPlayingTitle(self, show):
-        """This method sets the title of the window and the status bar to the
-        current playing URI."""
+        """
+        This method sets the title of the window and the status bar to the
+        current playing URI.
+        """
         if show:
             title = globals.niceAppName + ' - ' + utils.getFilenameFromURI(self._player.getURI())
         else:
@@ -769,6 +823,25 @@ class MorphinWindow(gobject.GObject):
         if not self.seeking:
             return
 
+    
+    def setWindowSize(self, w, h):
+        """
+        This method sets the main window size to the requested size.
+        
+        @param w: The width of the window.
+        @type w: int
+        @param h: The height of the window.
+        @type h: int
+        """
+        self.window.resize(w, h)
+    
+    
+    def getWindowSize(self):
+        """
+        This method returns the current size of the main window.
+        """
+        return (self.window.allocation.width, self.window.allocation.height)
+    
     
     def get_media_url(self, view, result):
         self.playFile(result)
