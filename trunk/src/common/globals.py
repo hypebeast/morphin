@@ -40,7 +40,7 @@ DEFAULT_CONFIG = """\
 [general]
 appWidth = 480
 appHeight = 320
-lastOpenedMedia = []
+recentMedia = []
 
 [video]
 brightness = 0

@@ -29,11 +29,12 @@ from kiwi.controllers import BaseController
 from kiwi.ui.delegates import Delegate, SlaveDelegate
 
 from src.common import globals
+from src.utils import utils
 
 
 class MediaFile:
     """This class describes a media file for an listview entry."""
-    def __init__(self, name, length):
+    def __init__(self, name, length='0:00', uri=""):
         """
         Constructor        
         
@@ -42,6 +43,7 @@ class MediaFile:
         """
         self.name = name
         self.length = length
+        self.uri = uri
 
 
 media_list_columns = [Column('name', 'Name', data_type=str),
@@ -51,7 +53,7 @@ media_list_columns = [Column('name', 'Name', data_type=str),
 class PlayMediaWindow(Delegate):
     widgets = ["imgAddMediaFile"]
 
-    def __init__(self, parent):
+    def __init__(self, parent, recentPlayed=None):
         windowName = "PlayMediaWindow"
 
         Delegate.__init__(self, gladefile=globals.gladeFile,
@@ -59,7 +61,7 @@ class PlayMediaWindow(Delegate):
                           delete_handler=self.quit_if_last)
 
         # Create the delegate and set it up
-        self.buildObjectList()
+        self.buildObjectList(recentPlayed)
         slave = SlaveDelegate(toplevel=self.mediaList)
 
         self.attach_slave("labelX", slave)
@@ -74,7 +76,7 @@ class PlayMediaWindow(Delegate):
         image.set_from_file(os.path.join(globals.imageDir, "movie_track_add.png"))
 
 
-    def buildObjectList(self):
+    def buildObjectList(self, media):
         """
         
         """
@@ -82,23 +84,24 @@ class PlayMediaWindow(Delegate):
         self.mediaList.connect('selection_changed', self.media_selected)
         self.mediaList.connect('double-click', self.double_click)
 
-        #self.window.add(self.mediaList)
-        #self.vbox2.pack_start(self.mediaList)
-
+        for i in media:
+            self.mediaList.append(MediaFile(utils.getFilenameFromURI(i), uri=i))
+            
         # FIXME: Remove it. Only for testing
-        for i in [('test1.wmv', "2.34"),
-                  ('test2.wmv', "2.59"),
-                  ('test3.wmv', "2.59"),
-                  ('test4.wmv', "2.59")]:
-            self.mediaList.append(MediaFile(i[0], i[1]))
+        #for i in [('test1.wmv', "2.34"),
+         #         ('test2.wmv', "2.59"),
+          #        ('test3.wmv', "2.59"),
+          #        ('test4.wmv', "2.59")]:
+          #  self.mediaList.append(MediaFile(i[0], i[1]))
 
 
     def media_selected(self, the_list, item):
-        print "TODO: Handle media selected" 
+        pass
 
 
     def double_click(self, the_list, selected_object):
-        print "TODO: Handle list object double clicked"
+        self.emit('result', selected_object.uri)
+        self.hide_and_quit()
 
 
     def on_bCancel__clicked(self, *args):

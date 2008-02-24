@@ -1,4 +1,4 @@
-# Copyright (C) 2007 Sebastian Ruml <sebastian.ruml@gmail.com>
+# Copyright (C) 2007-2008 Sebastian Ruml <sebastian.ruml@gmail.com>
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -65,12 +65,11 @@ class Config:
         self._filename = config_file
 
         try:
-            self._config = ConfigObj(config_file, unrepr=True)
+            self._config = ConfigObj(config_file, unrepr=True, list_values=True)
         except Exception,ex:
-            errors = [ error.msg for error in ex.errors ]
+            errors = [ error.msg for error in ex.errors]
             errors = ';'.join(errors)
-            raise ConfigError("Config format error in %s: %s" % (config_file,
-                                                                 errors))
+            #raise ConfigError("Config format error in %s: %s" % (config_file, errors))
         
 
     def get_filename(self):
