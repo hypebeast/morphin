@@ -16,7 +16,7 @@ You need to install the following packages:
  * Python 2.5
  * PyGTK 2.10
  * GStreamer Python Bindings 0.10
- * ConfigObj ([http://www.voidspace.org.uk/python/configobj.html Homepage])
+ * !ConfigObj ([http://www.voidspace.org.uk/python/configobj.html Homepage])
 
 = Step 3 =
 Got to the root directory of Morphin and execute the following command:
