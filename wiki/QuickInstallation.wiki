@@ -1,0 +1,19 @@
+#Installation guide for the development version.
+
+= Installation =
+
+This guide gives you a quick overview about the installation of the latest Morphin version.
+
+*Note:*
+No installer is available yet. Just follow the next steps to start Morphin,
+
+= Step 1 =
+
+Go to this is [http://code.google.com/p/morphin/source/checkout site] and checkout the latest development version of Moprhin.
+ 
+= Step 2 =
+You need to install the following packages:
+ * Python 2.5
+ * PyGTK 2.10
+ * GStreamer Python Bindings 0.10
+ * ...
