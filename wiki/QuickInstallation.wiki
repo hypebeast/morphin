@@ -16,6 +16,7 @@ You need to install the following packages:
  * Python 2.5
  * PyGTK 2.10
  * GStreamer Python Bindings 0.10
+ * Kiwi ([http://www.async.com.br/projects/kiwi/ Homepage])
  * !ConfigObj ([http://www.voidspace.org.uk/python/configobj.html Homepage])
 
 = Step 3 =
