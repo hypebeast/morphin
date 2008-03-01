@@ -87,15 +87,17 @@ def isStopMsg(msg):
 
 
 def getDuration(uri):
-    def discovered(d, is_media):
+    def on_discovered(d, is_media, infile):
+        print "Infile: %s" % infile
+        d.print_info()
         if is_media:
-            print d.videolength
+            print "Video length: %s" % d.videolength
             return utils.nsTos(d.videolength)
         else:
             pass
             
     d = discoverer.Discoverer(uri)
-    d.connect('discovered', discovered)
+    d.connect('discovered', on_discovered, uri)
     d.discover()
     
 
