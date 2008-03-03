@@ -87,7 +87,7 @@ class Player:
         """
         This method sets the video sink for the player
         """
-        self.logger.debug("Entered setVideoSink")
+        self.logger.info("Setting the video sink")
 
         sink = gst.element_factory_make(sinkName, 'video-sink') if sinkName else None
         self.player.set_property('video-sink', sink)
@@ -101,7 +101,7 @@ class Player:
         """
         This method sets the audio sink for the player
         """
-        self.logger.debug("Entered setAudioSink")
+        self.logger.info("Setting the audio sink")
         
         sink = gst.element_factory_make(sinkName, 'audio-sink') if sinkName else None
         self.player.set_property('audio-sink', sink)
@@ -109,7 +109,7 @@ class Player:
  
     def prepareImgSink(self, bus, message, far, b, c, h, s):
         """
-        This method sets the img sink. 
+        This method sets the image sink. 
         
         bus -- 
         message -- 
@@ -119,6 +119,7 @@ class Player:
         h -- 
         s -- 
         """
+        self.logger.info("gstPlayer: Preparing  the image sink.")
         self.imagesink = message.src
 
         self.setForceAspectRatio(far)
@@ -132,7 +133,7 @@ class Player:
         """
         This method sets the video output to the desired widget.
         """
-        self.logger.debug("Entered setImgSink()")
+        self.logger.info("gstPlayer: Setting the image sink.")
 
         try:
             id = widget.window.xid
@@ -152,15 +153,17 @@ class Player:
             self.seek(int(dur * pos))
     
             
-    def seek(self, loc):
+    def seek(self, location):
         """
         This method seeks to a set location in the filestream.
         """
         # Seek to the requested position.
         self.player.seek(1.0, gst.FORMAT_TIME,
             gst.SEEK_FLAG_FLUSH | gst.SEEK_FLAG_ACCURATE,
-            gst.SEEK_TYPE_SET, loc,
-            gst.SEEK_TYPE_NONE, 0)    
+            gst.SEEK_TYPE_SET,
+            location,
+            gst.SEEK_TYPE_NONE,
+            0)    
         
         
     def playingVideo(self):
@@ -232,7 +235,8 @@ class Player:
         """
         This method sets the aspect ratio for the video.
         """
-        pass
+        if (self.aspectSettings):
+            self.imagesink.set_property('pixel-aspect-ratio', val)
     
     
     def setBrightness(self, val):

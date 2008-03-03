@@ -29,6 +29,9 @@ from src.common import globals
 
 
 class AboutDialog:
+    """
+    About dialog.
+    """
     def __init__(self, parent):
         windowName = 'AboutDialog'
         self.xml = gtk.glade.XML(globals.gladeFile, windowName, globals.appName)
@@ -38,10 +41,11 @@ class AboutDialog:
         self.dlg.set_transient_for(parent)
         self.dlg.set_name(globals.niceAppName)
         self.dlg.set_version(globals.version)
+        self.dlg.set_comments("Simple video player based on Python, Gtk+ and Gstreamer.")
         self.dlg.set_logo(gtk.gdk.pixbuf_new_from_file_at_size(os.path.join(globals.imageDir, "morphin_icon.svg"), 300, 200))
         #self.dlg.set_license(gpl)
         self.dlg.set_authors(["Sebastian Ruml <sebastian.ruml@gmail.com>"])
-        self.dlg.set_website("http://omnius.ath.cx")
+        self.dlg.set_website("http://code.google.com/p/morphin/")
 
         # Show the dialog
         self.dlg.run()
@@ -50,6 +54,9 @@ class AboutDialog:
 
 
 class ErrMsgBox:
+    """
+    This class shows an error message box.
+    """
     def __init__(self, msg1, msg2):
         """
         

@@ -33,7 +33,9 @@ from src.utils import utils
 
 
 class MediaFile:
-    """This class describes a media file for an listview entry."""
+    """
+    This class describes a media file for the listview entry..
+    """
     def __init__(self, name, length='0:00', uri=""):
         """
         Constructor        
@@ -44,10 +46,12 @@ class MediaFile:
         self.name = name
         self.length = length
         self.uri = uri
+        self.lastPlayed = ""
 
 
 media_list_columns = [Column('name', 'Name', data_type=str),
-                      Column('length', 'Length', data_type=str)]
+                      Column('length', 'Length', data_type=str),
+                      Column('lastPlayed', 'Last Played', data_type=str, sorted=True, order=gtk.SORT_DESCENDING)]
 
 
 class PlayMediaWindow(Delegate):
@@ -62,6 +66,7 @@ class PlayMediaWindow(Delegate):
 
         # Create the delegate and set it up
         self.buildObjectList(recentPlayed)
+        self.mediaList.grab_focus()
         slave = SlaveDelegate(toplevel=self.mediaList)
 
         self.attach_slave("labelX", slave)
@@ -76,16 +81,18 @@ class PlayMediaWindow(Delegate):
         image.set_from_file(os.path.join(globals.imageDir, "movie_track_add.png"))
 
 
-    def buildObjectList(self, media):
+    def buildObjectList(self, mediaList):
         """
-        
+        This method builds and initialize the ObjectList.
         """
         self.mediaList = ObjectList(media_list_columns)
         self.mediaList.connect('selection_changed', self.media_selected)
         self.mediaList.connect('double-click', self.double_click)
 
-        for i in media:
-            self.mediaList.append(MediaFile(utils.getFilenameFromURI(i), uri=i))
+        for media in mediaList:
+            mf = MediaFile(media.getFilename(), uri=media.getURI(), length=media.getLengthSec())
+            mf.lastPlayed = media.getLastPlayed()
+            self.mediaList.append(mf)
             
         # FIXME: Remove it. Only for testing
         #for i in [('test1.wmv', "2.34"),
@@ -109,6 +116,7 @@ class PlayMediaWindow(Delegate):
 
 
     def on_bQuit__clicked(self, *args):
+        self.emit('result', 'quit')
         self.hide_and_quit()
 
 
@@ -148,6 +156,16 @@ class PlayMediaWindow(Delegate):
 
         dialog.destroy()
 
+
     def on_bPlayDisk__clicked(self, *args):
+        """
+        """
         pass
+    
+    
+    def onKeyPressEvent(self, widget=None, event=None):
+        """
+        """
+        pass
+    
 
