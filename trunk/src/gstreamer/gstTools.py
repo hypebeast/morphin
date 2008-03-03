@@ -25,7 +25,7 @@ from gst.extend import discoverer
 
 def vsinkDef():
     """
-    The method returns the first available videosink on the system.
+    The method returns the first videosink that is available on the system.
     """
     for x in globals.vsinkTypes:
         if gst.element_factory_find(x):

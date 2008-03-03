@@ -15,12 +15,15 @@
 # Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 
 import os, sys, signal
+import time
+import datetime
+import string
 
 import gobject
 import gtk, gtk.glade
 
 from src.common import globals
-from src.gui import dialogues, SettingsDialog, PlayMediaWindow
+from src.gui import dialogues, SettingsDialog, PlayMediaWindow, VideoSettingsDialog
 from src.gstreamer import gstPlayer as player
 from src.gstreamer import tools as gstTools
 from src.services import log 
@@ -65,6 +68,10 @@ class MorphinWindow(gobject.GObject):
                     "on_mnuiPlay_activate" : self.mnuiPlayClicked,
                     "on_mnuiStop_activate" : self.mnuiStopClicked,
                     "on_mnuiSettings_activate" : self.showSettingsDlg,
+                    "on_miVideoSettings_activate" : self.showVideoSettingsDialog,
+                    "on_mnuiDetermineAuto_toggled" : self.changeAspectRatio,
+                    "on_mnui4To3_toggled" : self.changeAspectRatio,
+                    "on_mnui16To9_toggled" : self.changeAspectRatio,
                     "on_videoDrawingArea_expose_event" : self.videoWindowExpose,
                     "on_videoDrawingArea_configure_event" : self.videoWindowConfigure,
                     "on_videoDrawingArea_motion_notify_event" : self.videoWindowMotion,
@@ -73,6 +80,7 @@ class MorphinWindow(gobject.GObject):
                     "on_MainWindow_key_press_event" : self.mainWindowKeyPressed,
                     "on_bTogglePlay_clicked" : self.playPauseToggle,
                     "on_btnPlay_clicked" : self.playFile,
+                    "on_bFullscreen_clicked" : self.tglFullscreen,
                     "on_hScaleProgress_button_press_event" : self.progressClicked,
                     "on_hScaleProgress_button_release_event" : self.progressSeekEnd,
                     "on_hScaleProgress_value_changed" : self.progressValueChanged,
@@ -85,7 +93,13 @@ class MorphinWindow(gobject.GObject):
         self.videoWindow = self.xml.get_widget('videoDrawingArea')
         self.progressScale = self.xml.get_widget('hScaleProgress')
         self.statusBar = self.xml.get_widget('statusbar')
+        self._rbDetermineAuto = self.xml.get_widget('mnuiDetermineAuto')
+        self._rb4To3 = self.xml.get_widget('mnui4To3')
+        self._rb16To9 = self.xml.get_widget('mnui16To9')
         
+        # Set the window to allow drops
+        self.window.drag_dest_set(gtk.DEST_DEFAULT_ALL, [("text/uri-list", 0, 0)], gtk.gdk.ACTION_COPY)
+
         # This member holds the context_id for the statusbar
         self.contextIdTime = self.statusBar.get_context_id("time")
         self.contextIdTitle = self.statusBar.get_context_id("title")
@@ -94,6 +108,9 @@ class MorphinWindow(gobject.GObject):
         image = os.path.join(globals.imageDir, 'morphin_icon.png')
         bgPixbuf = gtk.gdk.pixbuf_new_from_file_at_size(image, 32, 32)
         self.window.set_icon(bgPixbuf)
+
+        # Set some gui stuff
+        self._rbDetermineAuto.set_active(True)
         
         # Some status variables
         
@@ -112,7 +129,7 @@ class MorphinWindow(gobject.GObject):
         # TODO: Add singleton check here
         #self.__single = self
 
-    # Load all settings
+        # Load all settings
         self.loadConfig()
         
         # Show the main window
@@ -142,6 +159,9 @@ class MorphinWindow(gobject.GObject):
     # Stop the player
     stopPlayer = lambda self, widget: self._player.stop()
     
+    # Toggle fullscreen. Just a wrapper for callback methods.
+    tglFullscreen = lambda self, widget: self.toggleFullscreen()
+    
         
     def loadConfig(self):
         """
@@ -152,12 +172,14 @@ class MorphinWindow(gobject.GObject):
         h = self._config.get_option('appHeight', 'general')
         self.setWindowSize(w, h)
         
-        #TODO: Load recent played media
+        #Load recent played media
+        # TODO: Build from every saved UIR a MediaFile object and add it to the
+        # MediaManager.
         uris = self._config.get_option('recentMedia', 'general')
-        self._mediaManager.setRecentPlayed(uris)
+        self._mediaManager.AddMediaFromURIList(uris, self._config)
         
-        print uris
-    
+        #self._mediaManager.setMediaList(uris)
+        
     
     def saveConfig(self):
         """
@@ -165,15 +187,14 @@ class MorphinWindow(gobject.GObject):
         """
         # Save the window size
         w, h = self.getWindowSize()
-        self._logger.debug(w)
-        self._logger.debug(h)
         
         self._config.set_option('appWidth', w, 'general')
         self._config.set_option('appHeight', h, 'general')
         
         # Save recent played media
         uris = []
-        uris = self._mediaManager.getRecentPlayed()
+        #uris = self._mediaManager.getMediaList()
+        uris = self._mediaManager.GetURIs()
         self._config.set_option('recentMedia', uris, 'general')
         
         # Save all settings to the file system
@@ -181,6 +202,11 @@ class MorphinWindow(gobject.GObject):
     
         
     def quit(self, widget=None, event=None):
+        # Save the media info for the last played URI
+        if self._player.getURI() != None:
+            self._mediaManager.SaveMediaPosition(self._config, self._player.getURI(), self._player.getPlayedSec())
+            self._mediaManager.SaveLastPlayed(self._config, self._player.getURI(), str(datetime.date.today()))
+        
         # Shut down the GST
         self._player.stopCompletely()
         
@@ -213,7 +239,7 @@ class MorphinWindow(gobject.GObject):
         """
         This method shows the PlayMedia dialog.
         """
-        dlg = PlayMediaWindow.PlayMediaWindow(self.window, self._mediaManager.getRecentPlayed())
+        dlg = PlayMediaWindow.PlayMediaWindow(self.window, self._mediaManager.getMediaList())
         dlg.show_all()
         dlg.connect('result', self.get_media_url)
 
@@ -246,15 +272,26 @@ class MorphinWindow(gobject.GObject):
         SettingsDialog.SettingsDialog(self.window)
         
 
+    def showVideoSettingsDialog(self, widget=None, event=None):
+        """
+        """
+        mf = self._mediaManager.GetMediaFile(self._player.getURI())
+        settings = mf.getVideoSettings()
+        print settings
+        dlg = VideoSettingsDialog.VideoSettingsDialog(self.window, self._player, mf)
+        dlg.show_all()
+        dlg.connect('result', self.onResultVideoSettingsDialog)
+    
+    
     def preparePlayer(self):
         """
         This method prepares the player
         """
+        self._logger.info("Preparing the GStreamer backend...")
+        
         bus = self._player.getBus()
         bus.connect('message', self.onPlayerMessage)
         bus.connect('sync-message::element', self.onPlayerSyncMessage)
-        
-        self._logger.debug("Entered preparePlayer()")
 
         # Set audio and video sink
         self._player.setAudioSink(None)
@@ -265,7 +302,7 @@ class MorphinWindow(gobject.GObject):
         """
         
         """
-        self._logger.debug("Entered onPlayerMessage()") 
+        #self._logger.debug("Entered onPlayerMessage()") 
 
         t = gstTools.messageType(message)
         if t == 'eos':
@@ -282,7 +319,8 @@ class MorphinWindow(gobject.GObject):
             dialogues.ErrMsgBox("Error", str(msg[0]) + '\n\n' + str(msg[1]))
         elif t == 'state_changed' and message.src == self._player.player:
 		    self.onPlayerStateChange(message)
-        #elif t == 'tag':
+        elif t == 'tag':
+            pass
          #   self.setPlayingTitle(True)
 
         
@@ -290,20 +328,21 @@ class MorphinWindow(gobject.GObject):
         """
         
         """
-        self._logger.debug("Entered onPlayerSyncMessage") 
+        self._logger.debug("gstPlayer: onPlayerSyncMessage received") 
         
         if message.structure is None:
             return
 
         if message.structure.get_name() == 'prepare-xwindow-id':
+            self._logger.debug("gstPlayer: preparing xwindow")
+            
             self.showVideoWindow()
 
-            h = 0
-            b = 0
-            c = 0
-            s = 0
+            # Set the video settings
+            mf = self._mediaManager.GetMediaFile(self._player.getURI())
+            settings = mf.getVideoSettings()
             far = True
-            self._player.prepareImgSink(bus, message, far, b, c, h, s)
+            self._player.prepareImgSink(bus, message, far, settings[0], settings[1], settings[2], settings[3])
 
             self.setImageSink()
 
@@ -313,7 +352,7 @@ class MorphinWindow(gobject.GObject):
         This method is called on a state change of the player
         (message: state_changed).
 
-        message -- 
+        @param message: The message of the state change. 
         """
         msg = message.parse_state_changed()
         if (gstTools.isNull2ReadyMsg(msg)):
@@ -322,7 +361,7 @@ class MorphinWindow(gobject.GObject):
 			#	player.enableVisualisation()
 			#else:
 			#	player.disableVisualisation()
-            pass
+            self._logger.debug("isNull2ReadyMsg received")
         elif (gstTools.isStop2PauseMsg(msg)):
 			# The player has gone from stopped to paused.
 			# Get the array of audio tracks.
@@ -349,6 +388,12 @@ class MorphinWindow(gobject.GObject):
 
             # Set the title
             self.setPlayingTitle(True)
+            
+            # Get the media length and add write it to the config file
+            self._logger.debug("Media length: " + str(self._player.getDurationSec()))
+            self._mediaManager.SaveMediaLengthToConf(self._player.getURI(),
+                                                     self._player.getDurationSec(),
+                                                     self._config)
         elif (gstTools.isPlay2PauseMsg(msg)):
             # It's just been paused or stopped.
             self.playPauseChanged(False)
@@ -363,6 +408,8 @@ class MorphinWindow(gobject.GObject):
 			# Draw the background image.
             self.videoWindowOnStop()
 			
+            self._logger.debug("Stopped")
+            
             # Deactivate fullscreen.
             if (self.fsActive()):
                 self.deactivateFullscreen()
@@ -372,7 +419,6 @@ class MorphinWindow(gobject.GObject):
 			
             # Clear the title.
             self.setPlayingTitle(False)
-            pass
 
 
     def videoWindowExpose(self, widget, event):
@@ -393,7 +439,7 @@ class MorphinWindow(gobject.GObject):
 
     def videoWindowConfigure(self, widget, event=None):
         """
-        This method configures the video window
+        This method configures the video window.
         
         widget -- 
         event -- 
@@ -409,6 +455,25 @@ class MorphinWindow(gobject.GObject):
 
         # Queue the drawing area
         widget.queue_draw()
+
+
+    def setImageSink(self, widget=None):
+        """
+        This method sets the image sink to 'widget' or the default
+        one, if none passed.
+        """
+        #self._logger.debug("gstPlayeR: Setting the image sink.") 
+        
+        # If no widget is given, set it to the default
+        if not widget:
+            widget = self.videoWindow
+
+        self.videoWindowConfigure(widget)
+        
+        # Set the image sink
+        self._player.setImgSink(widget)
+
+        return False
 
 
     def onMainStateEvent(self, widget=None, event=None):
@@ -430,26 +495,7 @@ class MorphinWindow(gobject.GObject):
                 self.xml.get_widget(item).show()
                 
             self.controlsShown = True
-
-
-    def setImageSink(self, widget=None):
-        """
-        This method sets the image sink to 'widget' or the default
-        one, if none passed.
-        """
-        self._logger.debug("setImageSink called") 
-        
-        # If no widget is given, set it to the default
-        if not widget:
-            widget = self.videoWindow
-
-        self.videoWindowConfigure(widget)
-        
-        # Set the image sink
-        self._player.setImgSink(widget)
-
-        return False
-
+            
 
     def videoWindowOnStop(self):
         """
@@ -470,7 +516,9 @@ class MorphinWindow(gobject.GObject):
 
 
     def hideVideoWindow(self, force=False):
-        """This method hides the video window."""
+        """
+        This method hides the video window.
+        """
         if not self.fsActive() or force:
             # Hide the video window
             self.videoWindow.set_size_request(1, 1)
@@ -478,6 +526,48 @@ class MorphinWindow(gobject.GObject):
             w = self.window().get_size()[0]
             self.window.resize(w, 1)
 
+        
+    def showFullscreenControls(self):
+        """
+        This method shows the fullscreen controls, including the mouse cursor.
+        """
+        self.setCursor(None, self.videoWindow)
+    
+    
+    def hideFullscreenControls(self):
+        """
+        This method hides the fullscreen controls.
+        """
+        if not self.videoWindowShown():
+            return
+        
+        # Hide the cursor
+        self.hideCursor(self.videoWindow)
+        
+        # TODO: Hide all fullscreen controls
+    
+         
+    def setCursor(self, mode, widget):
+        """
+        """
+        widget.window.set_cursor(mode)
+    
+    
+    def hideCursor(self, widget):
+        """
+        """
+        # If there's no video playing, cancel it.
+        if (not self.videoWindowShown()):
+            return
+        
+        pix_data = globals.hiddenCursorPix
+        colour = gtk.gdk.Color()
+        pix = gtk.gdk.pixmap_create_from_data(None, pix_data, 1, 1, 1, colour, colour)
+        invisible = gtk.gdk.Cursor(pix, pix, colour, colour, 0, 0)
+        
+        # Set the cursor to the one just created.
+        self.setCursor(invisible, widget)
+        
 
     def drawVideoWindowImage(self):
         """
@@ -550,6 +640,11 @@ class MorphinWindow(gobject.GObject):
         @param filenmae: The filename of the file to be played.
         @type filename: string
         """
+        # Save the stream position of the currently playing media
+        if self._player.getURI() != None:
+            self._mediaManager.SaveMediaPosition(self._config, self._player.getURI(), self._player.getPlayedSec())
+            self._mediaManager.SaveLastPlayed(self._config, self._player.getURI(), str(datetime.date.today()))
+            
         self._player.stop()
 
         # TODO: Make it configurable
@@ -569,11 +664,12 @@ class MorphinWindow(gobject.GObject):
             if '://' not in filename:
                 filename = 'file://' + filename
 
-            # TODO: Last Played URI handling. Check if file was already played.
-            self._mediaManager.AddRecentPlayedMedia(filename, self._config)
+            # Add the media to the MediaManager
+            self._mediaManager.AddMedia(filename)
             
             self._player.setURI(filename)
 
+            # Start playing
             self._player.play()
         elif filename != "":
             print "Something strange happens, no such file: %s" % filename
@@ -670,6 +766,20 @@ class MorphinWindow(gobject.GObject):
         elif event.string == 's':
             # Stop playing
             self._player.stop()
+        elif event.string == 'n':
+            # TODO: Add handling for next and previous frame in pause mode
+            pass
+        elif event.string == 'p':
+            # TODO: Add handling for next and previous frame in pause mode
+            pass
+        elif event.string == 'v':
+            self.showVideoSettingsDialog()
+            #dlg = VideoSettingsDialog.VideoSettingsDialog(self.window, self._player)
+            #dlg.show_all()
+        else:
+            pass
+            #self._logger.debug("Key pressed: %x" %string.atoi(event.string, 16))
+            #print "Key pressed: %x" %event.string
 
 
     def videoWindowClicked(self, widget, event):
@@ -692,22 +802,45 @@ class MorphinWindow(gobject.GObject):
         """
         This method is called when a motion event occurs in the video window.
         """
-        pass
+        self.showFullscreenControls()
+        self.restartIdleTimer()
 
 
     def videoWindowEnter(self, widget, event):
         """
         This method is called when the video window is entered.
         """
-        pass
+        self.restartIdleTimer()
 
 
     def videoWindowLeave(self, widget, event):
         """
         This method ist called when the video window is leaved
         """
-        pass
+        self.destroyIdleTimer()
 
+
+    def createIdleTimer(self):
+        """
+        """
+        self._idleTimer = gobject.timeout_add(globals.IDLE_TIMEOUT, self.hideFullscreenControls)
+    
+    
+    def destroyIdleTimer(self):
+        """
+        """
+        try:
+            gobject.source_remove(self._idleTimer)
+        except:
+            pass
+    
+    
+    def restartIdleTimer(self):
+        """
+        """
+        self.destroyIdleTimer()
+        self.createIdleTimer()
+    
 
     def setPlayingTitle(self, show):
         """
@@ -725,7 +858,7 @@ class MorphinWindow(gobject.GObject):
 
     def setProgressRange(self):
         """
-        This method sets the range of the scale widget in dependece to the media
+        This method sets the range of the scale widget in dependence to the media
         length.
         """
         if self._player.isStopped():
@@ -736,25 +869,29 @@ class MorphinWindow(gobject.GObject):
             # Convert to int
             p, t = int(pld), int(tot)
             
+            self._logger.debug("Set Progress, length: %d played: %d" %(t, p))
+            
             # Set the range
             self.progressScale.set_range(0, t if t > 0 else 0)
             
-            # Status bar
+            # Update the status bar
             id = self.statusBar.push(self.contextIdTime, utils.buildStatusBarStr(t, p))
     
     
     def progressUpdate(self, pld=None, tot=None):
         """
-        This method updates the progress bar.
+        This method updates the progress bar and the status bar. It's periodically
+        called by a timer.
         
-        pld -- Time played (in s)
-        tot -- Totall length (ins s)
+        @param pld: Time played (in s)
+        @param tot: Total length (in s)
         """
         if self._player.isStopped():
             # Player is stopped
             pld = 0
             tot = 0
-            #self.progressScale.set_range(0, tot)
+            self.progressScale.set_range(0, tot)
+            self.progressScale.set_value(0)
         else:    
             # Otherwise (playing or paused), get the track time data and set the
             # progress scale fraction.
@@ -764,6 +901,7 @@ class MorphinWindow(gobject.GObject):
             # Convert to int
             p, t = int(pld), int(tot)
 
+            # Update the scale
             self.progressScale.set_value(p)
             
             # Update the status bar
@@ -773,6 +911,9 @@ class MorphinWindow(gobject.GObject):
     def progressClicked(self, widget=None, event=None):
         """
         This method is called when the user clicks on the progress scale.
+        
+        @param widget: 
+        @param event: 
         """
         self._logger.debug("Scale clicked")
         
@@ -792,6 +933,8 @@ class MorphinWindow(gobject.GObject):
         This method is called when seeking has ended (user releases the button).
         then it seeks to that position.
         """
+        self._logger.debug("Seek ended")
+        
         if self.seeking:
             self.seekFromProgress(widget, event)
             self.seeking = False
@@ -800,16 +943,19 @@ class MorphinWindow(gobject.GObject):
     def seekFromProgress(self, widget, event):
         """
         This method seeks to the given position in the stream.
+        
+        @param widget:
+        @param event:  
         """
         x, y, state = event.window.get_pointer()
         
         # Get the value from the scale
         val = self.progressScale.get_value()
         
-        self._logger.debug("Scale val: " + str(val))
+        #self._logger.debug("Scale val: " + str(val))
         
         if val > 0:
-            self._player.seekFrac(val)
+            self._player.seekFrac(val / self._player.getDurationSec())
         
         # Update the progress scale
         self.progressUpdate()
@@ -844,7 +990,11 @@ class MorphinWindow(gobject.GObject):
     
     
     def get_media_url(self, view, result):
-        self.playFile(result)
+        # FIXME: Quick hack for enabling closing the app from the PlayMediaWindow.
+        if result == 'quit':
+            self.quit()
+        else:
+            self.playFile(result)
 
 
     def quit_app(self, view, result):
@@ -857,3 +1007,28 @@ class MorphinWindow(gobject.GObject):
         """
         self.quit()
         
+        
+    def onResultVideoSettingsDialog(self, view, result):
+        if result == None:
+            return
+        
+        self._mediaManager.SaveVideoSettings(self._config, result.getURI(), result.getVideoSettings())
+       
+        
+    def changeAspectRatio(self, widget=None, event=None):
+        """
+        """
+        if widget == self._rbDetermineAuto:
+            if widget.get_active():
+                self._player.setForceAspectRatio(True)
+        elif widget == self._rb4To3:
+            if widget.get_active():
+                print "4To3"
+                self._player.setForceAspectRatio(False)
+                self._player.setAspectRatio("4/3")
+        elif widget == self._rb16To9:
+            if widget.get_active():
+                print "16To9"
+                #self._player.setForceAspectRatio(False)
+                self._player.setAspectRatio("16/9")
+    

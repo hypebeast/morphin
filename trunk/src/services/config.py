@@ -15,7 +15,6 @@
 # Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 
 import os, sys
-#from os.path import exists
 from configobj import ConfigObj
 import xdg.BaseDirectory
 
@@ -293,4 +292,4 @@ class clParser:
 
         self.parser.add_option("-f", "--fullscreen", dest="fullscreen",
 				action="store_true", default=False,
-				help="Starts Morphine in fullscreen mode")
+				help="Starts Morphin in fullscreen mode")

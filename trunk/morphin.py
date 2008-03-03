@@ -30,6 +30,7 @@ from src.services import log
 
 __appName__ = 'morphin'
 
+
 # Check that at least python 2.5 is running
 if sys.version_info < (2, 5):
     print _('Cannot continue, python version must be at least 2.5.')
@@ -51,7 +52,7 @@ sys_var = "HOME"
 # Initialize some global variables
 globals.appName = __appName__
 globals.niceAppName = 'Morphin'
-globals.version = '0.0.1'
+globals.version = '0.0.3'
 globals.srcDir = os.path.join(basedir, 'src')
 globals.gladePath = os.path.join(globals.srcDir, 'glade')
 globals.gladeFile = os.path.join(globals.gladePath, globals.appName + '.glade')
