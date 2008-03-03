@@ -38,8 +38,8 @@ if sys.version_info < (2, 5):
 
 # Find out the location of morphine's working directory, and insert it to sys.path
 basedir = os.path.dirname(os.path.realpath(__file__))
-if not os.path.exists(os.path.join(basedir, "morphine.py")):
-    if os.path.exists(os.path.join(os.getcwd(), "morphine.py")):
+if not os.path.exists(os.path.join(basedir, "morphin.py")):
+    if os.path.exists(os.path.join(os.getcwd(), "morphin.py")):
         basedir = os.getcwd()
 sys.path.insert(0, basedir)
 os.chdir(basedir) # Change dir to the base dir
