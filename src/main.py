@@ -25,7 +25,7 @@ import gtk, gtk.glade
 from src.common import globals
 from src.gui import dialogues, SettingsDialog, PlayMediaWindow, VideoSettingsDialog
 from src.gstreamer import gstPlayer as player
-from src.gstreamer import tools as gstTools
+from src.gstreamer import gstTools
 from src.services import log 
 from src.utils import utils
 from src.services import config
