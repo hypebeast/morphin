@@ -30,6 +30,8 @@ from src.services import log
 
 __appName__ = 'morphin'
 
+__version__ = '0.0.4'
+
 
 # Check that at least python 2.5 is running
 if sys.version_info < (2, 5):
@@ -52,7 +54,7 @@ sys_var = "HOME"
 # Initialize some global variables
 globals.appName = __appName__
 globals.niceAppName = 'Morphin'
-globals.version = '0.0.3'
+globals.version = __version__
 globals.srcDir = os.path.join(basedir, 'src')
 globals.gladePath = os.path.join(globals.srcDir, 'glade')
 globals.gladeFile = os.path.join(globals.gladePath, globals.appName + '.glade')
@@ -93,8 +95,6 @@ def main():
 	(options, args) = config.clParser(OptionParser(usage=usage, version=globals.version)).parseArgs(HELP)
 	if HELP:
 		sys.exit(0)
-
-	# Load the settings
 
 	# Create the main window
 	mainWindow = morphin.MorphinWindow(options, args)
