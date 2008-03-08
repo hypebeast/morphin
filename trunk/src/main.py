@@ -313,7 +313,7 @@ class MorphinWindow(gobject.GObject):
         elif t == 'error':
             # On an error, empty the currently playing file (also stops it).
             self.playFile(None)
-            self.stopPlayer()
+            self._player.stop()
             # Show an error about the failure.
             msg = message.parse_error()
             dialogues.ErrMsgBox("Error", str(msg[0]) + '\n\n' + str(msg[1]))
@@ -532,12 +532,19 @@ class MorphinWindow(gobject.GObject):
         This method shows the fullscreen controls, including the mouse cursor.
         """
         self.setCursor(None, self.videoWindow)
+        
+        if not self.controlsShown:
+            for x in globals.showFSWidgets:
+                self.xml.get_widget(x).show()
+                
+            self.controlsShown = True
     
     
     def hideFullscreenControls(self):
         """
         This method hides the fullscreen controls.
         """
+        # Do nothing, if the video window is not shown 
         if not self.videoWindowShown():
             return
         
@@ -545,6 +552,11 @@ class MorphinWindow(gobject.GObject):
         self.hideCursor(self.videoWindow)
         
         # TODO: Hide all fullscreen controls
+        if self.fsActive():
+            for x in globals.showFSWidgets:
+                self.xml.get_widget(x).hide()
+                
+            self.controlsShown = False 
     
          
     def setCursor(self, mode, widget):
@@ -822,6 +834,8 @@ class MorphinWindow(gobject.GObject):
 
     def createIdleTimer(self):
         """
+        This method creates a timer used for hiding all controls and the mouse 
+        cursor in fullscreen mode.
         """
         self._idleTimer = gobject.timeout_add(globals.IDLE_TIMEOUT, self.hideFullscreenControls)
     
