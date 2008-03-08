@@ -75,6 +75,8 @@ compatibleFiles = ['application/ogg', 'application/ram', 'application/smil',
 # This list contains all widgets that should be in fullscreen mode
 hiddenFSWidgets = ['menubar', 'bTogglePlay', 'hScaleProgress', 'bFullscreen', 'statusbar', 'hbox3']
 
+# List of widgets to reshow, in fullscreen mode, when the mouse is moved 
+showFSWidgets = ['bFullscreen', 'hScaleProgress', 'bTogglePlay', 'hbox3']
 
 # Pix data for hidden cursors.
 hiddenCursorPix = """/* XPM */
