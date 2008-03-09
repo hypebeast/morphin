@@ -34,7 +34,7 @@ from src.utils import utils
 
 class MediaFile:
     """
-    This class describes a media file for the listview entry..
+    This class describes a media file for the listview.
     """
     def __init__(self, name, length='0:00', uri=""):
         """
@@ -51,7 +51,8 @@ class MediaFile:
 
 media_list_columns = [Column('name', 'Name', data_type=str),
                       Column('length', 'Length', data_type=str),
-                      Column('lastPlayed', 'Last Played', data_type=str, sorted=True, order=gtk.SORT_DESCENDING)]
+                      Column('lastPlayed', 'Last Played', data_type=str,
+                             sorted=True, order=gtk.SORT_DESCENDING)]
 
 
 class PlayMediaWindow(Delegate):
@@ -112,19 +113,26 @@ class PlayMediaWindow(Delegate):
 
 
     def on_bCancel__clicked(self, *args):
+        """
+        This method is called when the user clicks the Cancel button. It closes
+        the dialog.
+        """
         self.hide_and_quit()
 
 
     def on_bQuit__clicked(self, *args):
+        """
+        This method is called when the user clicks the Quit button. It closes
+        the dialog and quits Morphin.
+        """
         self.emit('result', 'quit')
         self.hide_and_quit()
 
 
     def on_bPlayMedia__clicked(self, *args):
-        # TODO: Add open file dialog and start playing the selected
-        # file.
-        # Open the file chooser dialog
-
+        """
+        This method is called when the user clicks the Play Media button.
+        """
         dialog = gtk.FileChooserDialog("Open Media...",
                                         None,
                                         gtk.FILE_CHOOSER_ACTION_OPEN,
