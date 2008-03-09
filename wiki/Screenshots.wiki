@@ -1,3 +1,12 @@
-#Some Screenshots
+Some Screenshots
 
 = Screenshots =
+
+== Morphin playing a video ==
+http://morphin.googlecode.com/svn/wiki/images/morphin_videoplaying.png
+
+== Open Media Dialog ==
+http://morphin.googlecode.com/svn/wiki/images/morphin_openmedia.png
+
+== Video Settings Dialog ==
+http://morphin.googlecode.com/svn/wiki/images/morphin_videsettings.png
