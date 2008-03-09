@@ -423,7 +423,7 @@ class MorphinWindow(gobject.GObject):
 
     def videoWindowExpose(self, widget, event):
         """
-        This method is called when the expose event is fired
+        This method is called when the expose event is fired.
         """
         # Pull the dimensions
         x, y, w, h = event.area
@@ -770,8 +770,7 @@ class MorphinWindow(gobject.GObject):
         """
         if event.string == ' ':
             # Toggle play/pause
-            #self.playPauseToggle()
-            pass
+            self.playPauseToggle()
         elif event.string == 'f':
             # Toggle fullscreen
             self.toggleFullscreen()

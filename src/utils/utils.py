@@ -43,6 +43,24 @@ def secToStr(s):
     else:
         return '%d:%02d' % (m, s)
     
+
+def strToSec(s):
+    """
+    Converts the given time string (human readable format) in seconds.
+    """
+    parts = s.split(':')
+    
+    if length(parts) > 1:
+        if length(parts) == 1: # Only seconds
+            pass
+        elif length(parts) == 2: # Minutes, Seconds
+            pass
+        elif length(parts) == 3: # Hours, Minutes, Seconds
+            pass
+    elif length(parts) < 1:
+        # Just convert the string to int and return it
+        return int(s)
+    
     
 def getFilenameFromURI(uri):
     """
