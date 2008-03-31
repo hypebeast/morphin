@@ -176,7 +176,7 @@ class Player:
 
     def play(self):
         """
-        Starts the playback of the video
+        Starts the playback of the video.
         """
         # Starts the player only if the player has a URI
         if self.getURI():
@@ -222,6 +222,19 @@ class Player:
         """
         self.player.set_state(gst.STATE_PAUSED)
 
+
+    def setVolume(self, vol):
+        """
+        Sets the volume to the requested percentage.
+        """
+        self.player.set_property('volume', vol / 50)
+        
+    
+    def getVolume(self):
+        """
+        """
+        return (self.player.get_property('volume') * 100)
+        
 
     def setForceAspectRatio(self, val):
         """

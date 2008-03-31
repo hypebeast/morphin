@@ -28,8 +28,8 @@ from kiwi.ui.gadgets import quit_if_last
 from kiwi.controllers import BaseController
 from kiwi.ui.delegates import Delegate, SlaveDelegate
 
-from src.common import globals
 from src.utils import utils
+from src.common import globals
 
 
 class MediaFile:

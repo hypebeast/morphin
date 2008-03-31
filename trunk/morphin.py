@@ -30,7 +30,7 @@ from src.services import log
 
 __appName__ = 'morphin'
 
-__version__ = '0.0.4'
+__version__ = '0.0.5'
 
 
 # Check that at least python 2.5 is running
@@ -56,13 +56,21 @@ globals.appName = __appName__
 globals.niceAppName = 'Morphin'
 globals.version = __version__
 globals.srcDir = os.path.join(basedir, 'src')
-globals.gladePath = os.path.join(globals.srcDir, 'glade')
+
+# TODO: Add support for installation
+globals.gladePath = "@gladePath@"
+if globals.gladePath == '@' + 'gladePath@':
+    globals.gladePath = os.path.join(globals.srcDir, 'glade')
 globals.gladeFile = os.path.join(globals.gladePath, globals.appName + '.glade')
+
 #globals.confDir = "%s%s%s" % (os.getenv(sys_var), os.sep, ".morphine") 
 globals.confDir = xdg.BaseDirectory.save_config_path(globals.appName)
 # Get the config file path
 globals.cfgFile = os.path.join(globals.confDir, 'config.ini')
-globals.dataDir = os.path.join(basedir, 'data')
+
+globals.dataDir = "@dataDir@"
+if globals.dataDir == '@' + 'dataDir@':
+    globals.dataDir = os.path.join(basedir, 'data')
 globals.imageDir = os.path.join(globals.dataDir, 'images')
 #globals.logger = Logger()
 

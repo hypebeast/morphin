@@ -86,6 +86,11 @@ class MediaManager:
                 sp = 0
             mediaFile.setStreamPosition(sp)
             
+            sp = config.get_option('audioVolume', uri)
+            if sp == None:
+                sp = 0
+            mediaFile.setAudioVolume(sp)
+            
             val = config.get_option('brightness', uri)
             if val == None:
                 val = 0
@@ -146,7 +151,6 @@ class MediaManager:
         self.WriteDurationToConf(config, uri, dur)
         
         
-        
     def MediaExits(self, uri):
         """
         """
@@ -173,6 +177,7 @@ class MediaManager:
         """
         config.set_option('duration', dur, uri)
         
+        # Update the MediaFile object
         mf = self.GetMediaFile(uri)
         mf.setLength(dur)
         
@@ -182,6 +187,7 @@ class MediaManager:
         """
         config.set_option('streamPosition', position, uri)
         
+        # Update the MediaFile object
         # TODO: The saving of the position should be done at the closing of the
         # application.
         mf = self.GetMediaFile(uri)
@@ -193,8 +199,15 @@ class MediaManager:
         """
         config.set_option('lastPlayed', lastPlayed, uri)
         
+        # Update the MediaFile object
         mf = self.GetMediaFile(uri)
         mf.setLastPlayed(lastPlayed)
+    
+    
+    def SaveAudioVolume(self, config, uri):
+        """
+        """
+        config.set_option('audioVolume', int(self.GetMediaFile(uri).getAudioVolume()), uri)
     
         
     def SaveVideoSettings(self, config, uri, settings):

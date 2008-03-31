@@ -61,7 +61,6 @@ compatibleFiles = ['application/ogg', 'application/ram', 'application/smil',
                    'application/x-flash-video', 'application/x-matroska',
                    'application/x-ogg', 'application/x-quicktime-media-link',
                    'application/x-quicktimeplayer', 'application/x-shockwave-flash',
-                   'application/x-shorten', 'application/x-smil', 'application/xspf+xml',
                    'text/google-video-pointer', 'text/x-google-video-pointer', 'video/3gpp',
                    'video/dv', 'video/fli', 'video/flv', 'video/mp4', 'video/mp4v-es',
                    'video/mpeg', 'video/msvideo', 'video/quicktime', 'video/vivo',
@@ -72,7 +71,7 @@ compatibleFiles = ['application/ogg', 'application/ram', 'application/smil',
                    'video/x-nsv', 'video/x-ogm+ogg', 'video/x-theora+ogg', 'text/uri-list']
 
 
-# This list contains all widgets that should be in fullscreen mode
+# This list contains all widgets that should be hidden in fullscreen mode
 hiddenFSWidgets = ['menubar', 'bTogglePlay', 'hScaleProgress', 'bFullscreen', 'statusbar', 'hbox3']
 
 # List of widgets to reshow, in fullscreen mode, when the mouse is moved 
