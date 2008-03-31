@@ -44,6 +44,7 @@ class MediaFile:
         self._length = length
         self._lastPlayed = lastPlayed
         self._streamPosition = 0
+        self._audioVolume = 100
         self._brightness = 0
         self._contrast = 0
         self._hue = 0
@@ -72,6 +73,12 @@ class MediaFile:
         """
         """
         return self._streamPosition
+    
+    
+    def getAudioVolume(self):
+        """
+        """
+        return self._audioVolume
     
     
     def getBrightness(self):
@@ -123,6 +130,12 @@ class MediaFile:
         """
         """
         self._streamPosition = pos
+        
+    
+    def setAudioVolume(self, value):
+        """
+        """
+        self._audioVolume = value
         
         
     def setBrightness(self, val):

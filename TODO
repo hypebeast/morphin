@@ -1,0 +1,16 @@
++------+
+= Open =
++------+
+* 2008-03-30: Add a GoTo Dialog.
+
+* 2008-03-30: Implement instant seek for the video progress bar.
+
+
++------+
+= DONE =
++------+
+* 2008-03-31: Implement an audio volume adjuster.
+
+* 2008-03-31: Implement a setup file (distutils).
+
+* 2008-03-31: Remove Menu Entry for the GoTo feature.

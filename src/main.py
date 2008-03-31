@@ -1,3 +1,6 @@
+# -*- coding: utf-8 -*-
+# vim:set shiftwidth=4 tabstop=4 expandtab textwidth=79:
+
 # Copyright (C) 2007-2008 Sebastian Ruml <sebastian.ruml@gmail.com>
 #
 # This program is free software; you can redistribute it and/or modify
@@ -85,7 +88,12 @@ class MorphinWindow(gobject.GObject):
                     "on_hScaleProgress_button_release_event" : self.progressSeekEnd,
                     "on_hScaleProgress_value_changed" : self.progressValueChanged,
                     "on_MainWindow_window_state_event" : self.onMainStateEvent,
-                    "on_videoDrawingArea_key_press_event" : self.videoWindowClicked }
+                    "on_videoDrawingArea_key_press_event" : self.videoWindowClicked,
+                    "on_scaleVolume_value_changed" : self.audioScaleValueChanged,
+                    "on_mnuiShowVolumeControl_activate" : self.toggleVolumeControl,
+                    "on_mnuiIncreaseVolume_activate" : self._increaseVolumeClicked,
+                    "on_mnuiDecrease_activate" : self._decreaseVolumeClicked
+                    }
         self.xml.signal_autoconnect(signals)
 
         # Get all needed widgets
@@ -120,6 +128,9 @@ class MorphinWindow(gobject.GObject):
         # This member indicates if the controls are show or not
         self.controlsShown = True
         
+        # Indicates if the audio volume control is shown or not
+        self._audioControlsShown = False
+        
         # Creates and prepares the player
         self.preparePlayer()
 
@@ -132,11 +143,14 @@ class MorphinWindow(gobject.GObject):
         # Load all settings
         self.loadConfig()
         
+        # Initialize all GUI elements
+        self.initGui()
+        
         # Show the main window
         self.window.show()
 
         #
-        # Setting various states
+        # Set some default states
         #
 
         # Set the play/pause toggle button
@@ -145,7 +159,7 @@ class MorphinWindow(gobject.GObject):
         # Sets the video window for the state stop
         self.videoWindowOnStop()
 
-        # Update the progress
+        # Update the progress bar
         self.progressUpdate()
 
         # Process the command line arguments
@@ -206,6 +220,10 @@ class MorphinWindow(gobject.GObject):
         if self._player.getURI() != None:
             self._mediaManager.SaveMediaPosition(self._config, self._player.getURI(), self._player.getPlayedSec())
             self._mediaManager.SaveLastPlayed(self._config, self._player.getURI(), str(datetime.date.today()))
+            
+            # Save the audio volume level to the config file
+            m = self._mediaManager.GetMediaFile(self._player.getURI())
+            self._mediaManager.SaveAudioVolume(self._config, self._player.getURI())
         
         # Shut down the GST
         self._player.stopCompletely()
@@ -234,6 +252,12 @@ class MorphinWindow(gobject.GObject):
         if self._options.fullscreen:
             self.activateFullscreen()
     
+    
+    def initGui(self):
+        """
+        """
+        self.hideVolumeControl()
+    
         
     def showOpenMedia(self, widget=None, event=None):
         """
@@ -248,7 +272,14 @@ class MorphinWindow(gobject.GObject):
         """
         This method shows the about dialog.
         """
-        dialogues.AboutDialog(self.window) 
+        dialogues.AboutDialog(self.window)
+        
+        
+    def showMediaInfoDlg(self, widget=None, event=None):
+        """
+        This method shows the media info dialog.
+        """
+        pass
 
 
     def mnuiPlayClicked(self, widget=None, event=None):
@@ -277,7 +308,7 @@ class MorphinWindow(gobject.GObject):
         """
         mf = self._mediaManager.GetMediaFile(self._player.getURI())
         settings = mf.getVideoSettings()
-        print settings
+        #print settings
         dlg = VideoSettingsDialog.VideoSettingsDialog(self.window, self._player, mf)
         dlg.show_all()
         dlg.connect('result', self.onResultVideoSettingsDialog)
@@ -394,6 +425,10 @@ class MorphinWindow(gobject.GObject):
             self._mediaManager.SaveMediaLengthToConf(self._player.getURI(),
                                                      self._player.getDurationSec(),
                                                      self._config)
+            # FIXME: Move this to an extra method
+            w = self.xml.get_widget('scaleVolume')
+            m = self._mediaManager.GetMediaFile(self._player.getURI())
+            w.set_value(float(m.getAudioVolume()))
         elif (gstTools.isPlay2PauseMsg(msg)):
             # It's just been paused or stopped.
             self.playPauseChanged(False)
@@ -657,9 +692,14 @@ class MorphinWindow(gobject.GObject):
             self._mediaManager.SaveMediaPosition(self._config, self._player.getURI(), self._player.getPlayedSec())
             self._mediaManager.SaveLastPlayed(self._config, self._player.getURI(), str(datetime.date.today()))
             
+            # Save the audio volume level to the config file
+            m = self._mediaManager.GetMediaFile(self._player.getURI())
+            self._mediaManager.SaveAudioVolume(self._config, self._player.getURI())
+            
+        # Stop the player.
         self._player.stop()
 
-        # TODO: Make it configurable
+        # TODO: Make this configurable
         self._player.setAudioTrack(0)
         
         # If no file is to be played, set the URI to None, and the
@@ -785,13 +825,20 @@ class MorphinWindow(gobject.GObject):
             pass
         elif event.string == 'v':
             self.showVideoSettingsDialog()
-            #dlg = VideoSettingsDialog.VideoSettingsDialog(self.window, self._player)
-            #dlg.show_all()
+        elif event.string == 'a':
+            self.toggleVolumeControl()
         else:
             pass
-            #self._logger.debug("Key pressed: %x" %string.atoi(event.string, 16))
-            #print "Key pressed: %x" %event.string
-
+        
+        if event.keyval == 65361: # Left; Go back 25 Frames
+            pass
+        elif event.keyval == 65363: # Right; Skip forward 25 Frames
+            pass
+        elif event.keyval == 43: # + audio
+            self._changeAudioVolume(5)
+        elif event.keyval == 45: # - audio
+            self._changeAudioVolume(-5)
+        
 
     def videoWindowClicked(self, widget, event):
         """
@@ -941,6 +988,17 @@ class MorphinWindow(gobject.GObject):
             self.videoWindowClicked(widget, event)
 
 
+    def progressValueChanged(self, widget=None, event=None):
+        """
+        This method is called when the user moves the progress scale.
+        """
+        # If we are not seeking, return.
+        if not self.seeking:
+            return
+        
+        # TODO: Implement instant seek
+        
+        
     def progressSeekEnd(self, widget=None, event=None):
         """
         This method is called when seeking has ended (user releases the button).
@@ -974,15 +1032,6 @@ class MorphinWindow(gobject.GObject):
         self.progressUpdate()
 
 
-    def progressValueChanged(self, widget=None, event=None):
-        """
-        This method is called when the user moves the progress scale.
-        """
-        # If we are not seeking, return.
-        if not self.seeking:
-            return
-
-    
     def setWindowSize(self, w, h):
         """
         This method sets the main window size to the requested size.
@@ -1036,12 +1085,81 @@ class MorphinWindow(gobject.GObject):
                 self._player.setForceAspectRatio(True)
         elif widget == self._rb4To3:
             if widget.get_active():
-                print "4To3"
+                #print "4To3"
                 self._player.setForceAspectRatio(False)
                 self._player.setAspectRatio("4/3")
         elif widget == self._rb16To9:
             if widget.get_active():
-                print "16To9"
+                #print "16To9"
                 #self._player.setForceAspectRatio(False)
                 self._player.setAspectRatio("16/9")
+                
+            
+    def showVolumeControl(self):
+        """
+        This method shows the volume control.
+        """
+        self.xml.get_widget("scaleVolume").show()
+        self._audioControlsShown = True
     
+        
+    def hideVolumeControl(self):
+        """
+        This method hides the volume control.
+        """
+        self.xml.get_widget("scaleVolume").hide()
+        self._audioControlsShown = False
+    
+    
+    def toggleVolumeControl(self, widget=None, event=None):
+        if self._audioControlsShown == True:
+            self.hideVolumeControl()
+        elif self._audioControlsShown == False:
+            self.showVolumeControl()
+
+
+    def audioScaleValueChanged(self, widget = None, event = None):
+        """
+        """
+        val = widget.get_value()
+        self._player.setVolume(val)
+        
+        # Save the volume for the media file (MediaManager)
+        m = self._mediaManager.GetMediaFile(self._player.getURI())
+        m.setAudioVolume(int(val))
+    
+    
+    def _changeAudioVolume(self, value):
+        """
+        This method changes the audio volume for the current playing file, by the
+        given value.
+        """
+        vol = self._player.getVolume()
+        
+        if (vol + value) >= 100 or (vol - value) <= 0:
+            return
+        
+        vol += value
+        
+        self._player.setVolume(vol)
+        
+        # Update the volume scale
+        x = self.xml.get_widget('scaleVolume')
+        x.set_value(float(vol))
+        
+        # Save the volume for the media file (MediaManager)
+        m = self._mediaManager.GetMediaFile(self._player.getURI())
+        m.setAudioVolume(int(vol))
+        
+        
+    def _increaseVolumeClicked(self, widget=None, event=None):
+        """
+        """
+        self._changeAudioVolume(5)
+    
+    
+    def _decreaseVolumeClicked(self, widget=None, event=None):
+        """
+        """
+        self._changeAudioVolume(-5)
+        
