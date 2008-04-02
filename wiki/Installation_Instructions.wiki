@@ -11,12 +11,33 @@ TODO
 }}}
 
 
-= Step 1 - Download the latest Source Code=
+= Step 1 - Download the latest source code=
 
 Download the latest release from this [http://code.google.com/p/morphin/downloads/list Site].
 
 
-= Step 2 =
+= Step 2 - Unpack the code =
 
 Unpack the package:
-TODO
+{{{
+# tar xvzf morphin_v0.0.5-Alpha.tar.gz
+}}}
+
+
+= Step 3 - Run the setup script =
+Change to the Morphin directory:
+{{{
+# cd morphin_v0.0.5
+}}}
+
+Run the setup script:
+{{{
+# ./setup.py install
+}}}
+
+
+= Step 4 - Execute Morphin =
+Just run:
+{{{
+# morphin
+}}}
