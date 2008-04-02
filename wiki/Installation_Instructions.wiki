@@ -2,18 +2,21 @@ Installation Instructions for Morphin.
 
 = Introduction =
 
-TODO
+This wiki page contains step by step instructions to download, install and execute Morphin.
 
 = Prerequirements =
-
+Install all dependencies:
+{{{
 TODO
+}}}
 
 
-= Step 1 =
+= Step 1 - Download the latest Source Code=
 
-TODO
+Download the latest release from this [http://code.google.com/p/morphin/downloads/list Site].
 
 
 = Step 2 =
 
+Unpack the package:
 TODO
